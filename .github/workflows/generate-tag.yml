@@ -56,3 +56,12 @@ jobs:
           tag_name: v${{ github.event.inputs.release_version }}
           name: Release v${{ github.event.inputs.release_version }}
           generate_release_notes: true
+
+  publish:
+    needs: tag-and-release
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/gradle-publish.yml
+    with:
+      release_version: ${{ github.event.inputs.release_version }}
