@@ -1,25 +1,46 @@
 name: tag and release
 
+# Cuts a contracts release: bumps `version` in build.gradle.kts on master, tags it, creates
+# the GitHub Release, then publishes the package. The version reaches scripts through the
+# environment only and is validated as strict MAJOR.MINOR.PATCH first.
+
 on:
   workflow_dispatch:
     inputs:
       release_version:
-        description: 'Release version (e.g. 1.0.0)'
+        description: 'Release version, MAJOR.MINOR.PATCH (e.g. 2.4.0)'
         required: true
+
+# Releases queue rather than cancel: a half-pushed tag is worse than a waiting run.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions: {}
 
 jobs:
   tag-and-release:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 10
     permissions:
-      contents: write # push commits + tag
-      packages: write # for completeness
-
+      contents: write # push the version commit and the tag, create the release
+    env:
+      RELEASE_VERSION: ${{ inputs.release_version }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - name: Validate version
+        run: |
+          set -euo pipefail
+          if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=Bad version::'$RELEASE_VERSION' is not MAJOR.MINOR.PATCH (no leading v)."
+            exit 1
+          fi
+
+      # The next steps commit and push with this token, so it stays in .git/config for the
+      # job. The checkout is never uploaded as an artifact.
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1  # zizmor: ignore[artipacked]
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0  # Required to create annotated tag and push
 
       - name: Set up Git
@@ -29,39 +50,42 @@ jobs:
 
       - name: Bump version in build.gradle.kts
         run: |
-          sed -i 's/^version = ".*"/version = "${{ github.event.inputs.release_version }}"/' build.gradle.kts
+          sed -i "s/^version = \".*\"/version = \"${RELEASE_VERSION}\"/" build.gradle.kts
 
       - name: Commit version bump
         run: |
           if git diff --quiet -- build.gradle.kts; then
-            echo "build.gradle.kts already uses version ${{ github.event.inputs.release_version }}"
+            echo "build.gradle.kts already uses version ${RELEASE_VERSION}"
           else
             git add build.gradle.kts
-            git commit -m "chore: release version ${{ github.event.inputs.release_version }}"
+            git commit -m "chore: release version ${RELEASE_VERSION}"
             git push origin master
           fi
 
       - name: Create Git tag
         run: |
-          if git rev-parse "v${{ github.event.inputs.release_version }}" >/dev/null 2>&1; then
-            echo "Tag v${{ github.event.inputs.release_version }} already exists"
+          if git rev-parse "v${RELEASE_VERSION}" >/dev/null 2>&1; then
+            echo "Tag v${RELEASE_VERSION} already exists"
           else
-            git tag v${{ github.event.inputs.release_version }}
-            git push origin v${{ github.event.inputs.release_version }}
+            git tag "v${RELEASE_VERSION}"
+            git push origin "v${RELEASE_VERSION}"
           fi
 
+      # gh instead of a third-party action: one fewer dependency holding contents: write.
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ github.event.inputs.release_version }}
-          name: Release v${{ github.event.inputs.release_version }}
-          generate_release_notes: true
+        run: |
+          if gh release view "v${RELEASE_VERSION}" >/dev/null 2>&1; then
+            echo "Release v${RELEASE_VERSION} already exists"
+          else
+            gh release create "v${RELEASE_VERSION}" --title "Release v${RELEASE_VERSION}" --generate-notes
+          fi
 
   publish:
     needs: tag-and-release
     permissions:
       contents: read
       packages: write
-    uses: ./.github/workflows/gradle-publish.yml
+    # './' rather than '$/': actionlint does not accept the '$/' syntax yet.
+    uses: ./.github/workflows/gradle-publish.yml  # zizmor: ignore[self-repository]
     with:
-      release_version: ${{ github.event.inputs.release_version }}
+      release_version: ${{ inputs.release_version }}

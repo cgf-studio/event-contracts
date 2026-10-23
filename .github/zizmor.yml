@@ -1,0 +1,8 @@
+# zizmor policy: third-party actions are pinned to a commit SHA; the platform's own
+# reusable workflows (cgf-platform/shared-workflows) are pinned by immutable release tag.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        cgf-platform/shared-workflows/*: ref-pin
+        "*": hash-pin
