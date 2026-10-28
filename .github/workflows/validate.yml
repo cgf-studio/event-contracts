@@ -1,0 +1,20 @@
+name: Validate
+
+# Builds and runs the contract tests on every pull request. Uses the platform's reusable
+# library workflow, so this repo gets the same read-only, SHA-pinned CI as the services.
+# Event contracts have no private dependencies, so no package credentials are passed.
+
+on:
+  pull_request:
+    branches: [ master ]
+
+permissions: {}
+
+jobs:
+  validate:
+    permissions:
+      contents: read
+      packages: read
+    uses: cgf-platform/shared-workflows/.github/workflows/library-validate.yml@v3.10.0
+    with:
+      library-name: event-contracts
