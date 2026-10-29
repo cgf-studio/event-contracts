@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "2.1.20"
+    kotlin("jvm") version "2.4.21"
     `maven-publish`
     id("com.github.davidmc24.gradle.plugin.avro") version "1.9.1"
 }
@@ -19,7 +19,12 @@ repositories {
 }
 
 dependencies {
-    implementation("org.apache.avro:avro:1.12.0")
+    // Not 1.12.2: it adds a ClassSecurityValidator that refuses to load generated classes outside a
+    // trusted package list, so KafkaAvroDeserializer (specific.avro.reader=true) fails with
+    // SecurityException on every contract class. 1.12.1 is what the services resolve through Confluent.
+    // OrderStatusContractTest fails on 1.12.2, which is the guard. Moving past 1.12.1 needs
+    // org.apache.avro.SERIALIZABLE_PACKAGES set for com.cgf in every consumer first.
+    implementation("org.apache.avro:avro:1.12.1")
     testImplementation(kotlin("test"))
 }
 
