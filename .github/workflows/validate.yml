@@ -15,6 +15,6 @@ jobs:
     permissions:
       contents: read
       packages: read
-    uses: cgf-platform/shared-workflows/.github/workflows/library-validate.yml@v3.10.0
+    uses: cgf-platform/shared-workflows/.github/workflows/library-validate.yml@v3.11.0
     with:
       library-name: event-contracts
