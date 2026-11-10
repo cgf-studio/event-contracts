@@ -35,6 +35,15 @@
         }
       ],
       "default": null
+    },
+    {
+      "name": "reason",
+      "doc": "Why it was cancelled, for example NO_COURIER; null when the producer gives none. A string on purpose: a new value must not need a new contract version.",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
     }
   ]
 }
