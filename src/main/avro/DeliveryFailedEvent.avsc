@@ -1,0 +1,55 @@
+{
+  "type": "record",
+  "name": "DeliveryFailedEvent",
+  "namespace": "com.cgf.order.contracts.models",
+  "doc": "A delivery that failed after pickup: the courier could not hand the order over. Not a cancellation: nothing is refunded and the courier and the restaurant are paid.",
+  "fields": [
+    {
+      "name": "deliveryId",
+      "type": "string"
+    },
+    {
+      "name": "orderId",
+      "type": "string"
+    },
+    {
+      "name": "restaurantId",
+      "type": {
+        "type": "string",
+        "logicalType": "uuid"
+      }
+    },
+    {
+      "name": "customerId",
+      "type": {
+        "type": "string",
+        "logicalType": "uuid"
+      }
+    },
+    {
+      "name": "driverId",
+      "doc": "The courier who held the order.",
+      "type": {
+        "type": "string",
+        "logicalType": "uuid"
+      }
+    },
+    {
+      "name": "reason",
+      "doc": "Why it failed, for example CUSTOMER_UNREACHABLE. A string on purpose: a new value must not need a new contract version.",
+      "type": "string"
+    },
+    {
+      "name": "verified",
+      "doc": "True when the courier's position was checked against the delivery location; false when the order had no precise enough location to check.",
+      "type": "boolean"
+    },
+    {
+      "name": "failedAt",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    }
+  ]
+}
